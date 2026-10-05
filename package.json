@@ -4,8 +4,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "predev": "node scripts/unpack-assets.mjs",
-    "prebuild": "node scripts/unpack-assets.mjs",
+    "predev": "node scripts/unpack-assets.mjs && node scripts/fetch-assets.mjs",
+    "prebuild": "node scripts/unpack-assets.mjs && node scripts/fetch-assets.mjs",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
