@@ -31,6 +31,7 @@ export function TeamPanel({ state, swapFrom, onRename, onNudge, onSwap, onArmSwa
         const bezzerLive =
           state.phase === "play" &&
           question &&
+          !state.pendingPoints &&
           question.color !== color &&
           state.respondent !== color &&
           !state.bezzerQueue.includes(color) &&
@@ -121,7 +122,7 @@ export function TeamPanel({ state, swapFrom, onRename, onNudge, onSwap, onArmSwa
               <TokenFace
                 label="Besser"
                 count={team.bezzersLeft}
-                hot={state.respondent === color || state.bezzerQueue.includes(color)}
+                hot={state.respondent === color || state.bezzerQueue.includes(color) || state.pendingPoints === color}
                 spent={team.bezzersLeft <= 0}
                 disabled={!bezzerLive}
                 onClick={() => onBezzer(color)}
