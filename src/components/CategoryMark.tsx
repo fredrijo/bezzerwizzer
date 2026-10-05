@@ -1,3 +1,4 @@
+import { tileUrl } from "@/lib/assets.ts"
 import type { Category } from "@/game/types.ts"
 
 const TINTS = [
@@ -29,7 +30,7 @@ type CategoryMarkProps = {
 export function CategoryMark({ category, size = "md" }: CategoryMarkProps) {
   const tint = tintFor(category.id)
   const file = category.iconFile
-  const src = file ? `${import.meta.env.BASE_URL}tiles/${file}` : null
+  const src = file ? tileUrl(file) : null
   const drawn = file?.endsWith(".svg")
   return (
     <span
