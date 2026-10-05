@@ -23,6 +23,7 @@ import { Board } from "@/components/Board.tsx"
 import { SetupScreen } from "@/components/SetupScreen.tsx"
 import { ShockFlash } from "@/components/ShockFlash.tsx"
 import { STREAKER_MOTIONS, STREAKERS } from "@/components/streakers.tsx"
+import { streakerUrl } from "@/lib/assets.ts"
 import { SwapOverlay } from "@/components/SwapOverlay.tsx"
 import { TeamPanel } from "@/components/TeamPanel.tsx"
 import { TurnBox } from "@/components/TurnBox.tsx"
@@ -375,7 +376,7 @@ export default function App() {
         <button type="button" className="streaker-stage" aria-label="Lukk streaker" onClick={dismissRunner}>
           <span key={runners[0].id} className={`streaker-card ${runners[0].motion}`}>
             <img
-              src={`${import.meta.env.BASE_URL}streakers/${runners[0].file}`}
+              src={streakerUrl(runners[0].file)}
               alt=""
               onError={dismissRunner}
             />
