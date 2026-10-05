@@ -35,7 +35,9 @@ export type Team = {
   won: boolean
   tiles: [Tile, Tile, Tile, Tile]
   stats: TeamStats
+  /** One category swap with another team, refreshed each round. */
   swapsLeft: number
+  /** Two Bezzerwizzer bricks, refreshed each round. */
   bezzersLeft: number
 }
 
@@ -54,8 +56,11 @@ export type GameState = {
   addons: string[]
   round: number
   phase: Phase
+  /** Questions answered in this round. Category index is floor(turn / teams). */
   turn: number
+  /** Set when the team whose turn it is has missed and a queued team is answering. */
   respondent: TeamColor | null
+  /** Teams waiting to answer this question if the current answer is wrong, in press order. */
   bezzerQueue: TeamColor[]
   streakChance: number
   festMode: boolean
