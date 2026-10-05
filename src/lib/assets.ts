@@ -27,8 +27,38 @@ export function tileUrl(file: string): string {
   return `${ORIGIN}tiles/${encodeURIComponent(remote)}`
 }
 
+const REMOTE_STREAKERS = new Set([
+  "asian.jpg",
+  "beard.jpg",
+  "bikini.jpg",
+  "blackandwhite.jpg",
+  "blotter.jpg",
+  "carrier.jpg",
+  "cops.jpg",
+  "cricket.jpg",
+  "elegant.jpg",
+  "ett_bryst.jpg",
+  "hodegrep.jpg",
+  "homer.jpg",
+  "jagland.jpg",
+  "jump.jpg",
+  "kreisklasse.jpg",
+  "lady.jpg",
+  "laer.jpg",
+  "lakk.jpg",
+  "mobile.jpg",
+  "ooh.jpg",
+  "rodney.jpg",
+  "schyyy.jpg",
+  "stang.jpg",
+  "tackle.jpg",
+  "tennis.jpg",
+])
+
 export function streakerUrl(file: string): string {
-  if (import.meta.env.DEV) return `${import.meta.env.BASE_URL}streakers/${file}`
+  if (import.meta.env.DEV || !REMOTE_STREAKERS.has(file)) {
+    return `${import.meta.env.BASE_URL}streakers/${file}`
+  }
   const remote = file === "laer.jpg" ? "lær.jpg" : file
   return `${ORIGIN}streakers/${encodeURIComponent(remote)}`
 }

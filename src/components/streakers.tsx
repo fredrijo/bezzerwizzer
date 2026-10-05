@@ -42,6 +42,16 @@ const extras = [
   "not-on-tv-a.jpg",
   "not-on-tv-b.jpg",
   "female-streaker.jpg",
+  "lego-wembley.jpg",
+  "night-glitch.jpg",
+  "train-socks.jpg",
+  "masked-run.jpg",
+  "hooded-run.jpg",
+  "rose-run.jpg",
+  "balloon-run.jpg",
+  "festival-run.jpg",
+  "ice-slide.jpg",
+  "muybridge-ball.jpg",
 ]
 
 const quips = [
@@ -50,6 +60,11 @@ const quips = [
   "Dommeren så ingenting.",
   "Dette teller ikke som geografi.",
   "Jeg var bare på gjennomfart.",
+  "Sokker teller som antrekk.",
+  "Legoen slapp unna.",
+  "Masken gjør det offisielt.",
+  "1887, og fortsatt foran.",
+  "Isen var glatt. Unnskyldningen også.",
 ]
 
 export const STREAKERS: StreakerPhoto[] = [...originals, ...extras].map((file, index) => ({
