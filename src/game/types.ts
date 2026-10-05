@@ -62,6 +62,8 @@ export type GameState = {
   respondent: TeamColor | null
   /** Teams waiting to answer this question if the current answer is wrong, in press order. */
   bezzerQueue: TeamColor[]
+  /** Set after a besserwisser team answers correctly, until the table picks 1 or 3 points. */
+  pendingPoints: TeamColor | null
   streakChance: number
   festMode: boolean
   streak: number

@@ -1,4 +1,4 @@
-import { DECKS, type GameState, type Phase, type TeamColor } from "@/game/types.ts"
+import { COLORS, DECKS, type GameState, type Phase, type TeamColor } from "@/game/types.ts"
 
 const KEY = "bezzerwizzer-night-v1"
 
@@ -41,6 +41,7 @@ function hydrate(state: GameState): GameState {
     addons: Array.isArray(state.addons) ? state.addons : [],
     respondent: state.respondent ?? null,
     bezzerQueue,
+    pendingPoints: COLORS.includes(state.pendingPoints as TeamColor) ? (state.pendingPoints as TeamColor) : null,
     teams: state.teams.map((team) => ({
       ...team,
       swapsLeft: typeof team.swapsLeft === "number" ? team.swapsLeft : 1,
