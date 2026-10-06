@@ -132,11 +132,18 @@ export function rollStreakers(state: GameState, steps: number, rng: Rng): number
 
 type Advance = { team: Team; moved: number; wonNow: boolean }
 
+function firstBrakeIndex(): number {
+  return TRACK.findIndex((square) => square.y === 5 && square.x > 0)
+}
+
 function advance(team: Team, direction: Direction, steps: number): Advance {
+  const gate = firstBrakeIndex()
+  const entering = direction === "forward" && !onHomeStretch(team)
+  const limit = direction === "forward" && onHomeStretch(team) ? Math.min(steps, 1) : steps
   let current = team
   let moved = 0
   let wonNow = false
-  for (let step = 0; step < steps; step += 1) {
+  for (let step = 0; step < limit; step += 1) {
     if (current.won) break
     if (direction === "back" && current.position === 0) break
     if (direction === "forward" && current.position >= LAP - 1) {
@@ -156,14 +163,16 @@ function advance(team: Team, direction: Direction, steps: number): Advance {
         position: current.position + 1,
         stats: { ...current.stats, forward: current.stats.forward + 1 },
       }
+      moved += 1
+      if (entering && current.position === gate) break
     } else {
       current = {
         ...current,
         position: current.position - 1,
         stats: { ...current.stats, backward: current.stats.backward + 1 },
       }
+      moved += 1
     }
-    moved += 1
   }
   return { team: current, moved, wonNow }
 }
@@ -279,6 +288,7 @@ export function awardCorrect(
   const doubled = state.doubleNext === color && !team.won && !home
   const steps = team.won ? 0 : home ? 1 : base * (doubled ? 2 : 1)
   const moved = steps === 0 ? { team, moved: 0, wonNow: false } : advance(team, "forward", steps)
+  const stoppedAtGate = !home && !moved.wonNow && moved.moved < steps && onHomeStretch(moved.team)
   const tiles = team.tiles.map((candidate, index) =>
     index === tileIndex ? { ...candidate, used: true } : candidate,
   ) as Team["tiles"]
@@ -296,7 +306,7 @@ export function awardCorrect(
     doubleNext: doubled ? null : state.doubleNext,
     winner: moved.wonNow && !state.winner ? color : state.winner,
   }
-  const streakers = team.won ? 0 : rollStreakers(next, steps, rng)
+  const streakers = team.won ? 0 : rollStreakers(next, moved.moved, rng)
   next = noteStreakers(next, streakers)
   const text = moved.wonNow
     ? `${team.name} svarte riktig på ${category.name} og fullfører banen!`
@@ -304,7 +314,9 @@ export function awardCorrect(
       ? `${team.name} har allerede vunnet. ${category.name} merkes som brukt.`
       : home
         ? `${team.name} svarte riktig på ${category.name}. Prikkfeltet gir ett felt.`
-        : `${team.name} svarte riktig på ${category.name} og flytter ${moved.moved} felt${doubled ? " (dobbelt)" : ""}.`
+        : stoppedAtGate
+          ? `${team.name} svarte riktig på ${category.name} og stopper på første prikkfelt.`
+          : `${team.name} svarte riktig på ${category.name} og flytter ${moved.moved} felt${doubled ? " (dobbelt)" : ""}.`
   next = pushLog(next, text, moved.wonNow ? "win" : "move")
   return result(
     next,
@@ -318,9 +330,11 @@ export function awardCorrect(
         ? `${team.name} vinner banen`
         : home
           ? "Prikkfelt: riktig svar gir ett felt"
-          : doubled
-            ? `Dobbelt! ${category.name} gir ${moved.moved} felt`
-            : null,
+          : stoppedAtGate
+            ? "Første prikkfelt. Resten av flyttet stoppes."
+            : doubled
+              ? `Dobbelt! ${category.name} gir ${moved.moved} felt`
+              : null,
     },
     color,
   )
@@ -575,6 +589,7 @@ function scoreThief(state: GameState, question: Question, thiefColor: TeamColor,
   const moved = steps === 0
     ? { team: getTeam(next, thiefColor), moved: 0, wonNow: false }
     : advance(getTeam(next, thiefColor), "forward", steps)
+  const stoppedAtGate = !home && !moved.wonNow && moved.moved < steps && onHomeStretch(moved.team)
   const nextTeam: Team = {
     ...moved.team,
     stats: { ...moved.team.stats, correct: thief.stats.correct + 1 },
@@ -594,7 +609,9 @@ function scoreThief(state: GameState, question: Question, thiefColor: TeamColor,
     ? `${thief.name} tar ${category.name} med besserwisser og fullfører banen!`
     : home
       ? `${thief.name} tar ${points} poeng på ${category.name}. Prikkfeltet gir ett felt.`
-      : `${thief.name} tar ${points} poeng på ${category.name} og flytter ${moved.moved} felt${doubled ? " (dobbelt)" : ""}.`
+      : stoppedAtGate
+        ? `${thief.name} tar ${points} poeng på ${category.name} og stopper på første prikkfelt.`
+        : `${thief.name} tar ${points} poeng på ${category.name} og flytter ${moved.moved} felt${doubled ? " (dobbelt)" : ""}.`
   next = pushLog(next, text, moved.wonNow ? "win" : "move")
   return result(
     next,
@@ -604,7 +621,7 @@ function scoreThief(state: GameState, question: Question, thiefColor: TeamColor,
       blip: moved.moved > 0,
       fanfare: moved.wonNow,
       streakers,
-      banner: `${thief.name} tar poengene`,
+      banner: stoppedAtGate ? `${thief.name} stopper på første prikkfelt` : `${thief.name} tar poengene`,
     },
     thiefColor,
   )
