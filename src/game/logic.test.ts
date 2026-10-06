@@ -12,6 +12,7 @@ import {
   newRound,
   nudge,
   onHomeStretch,
+  awardBezzerPoints,
   playBezzer,
   squareFor,
   startRound,
@@ -264,10 +265,56 @@ describe("scoring", () => {
     expect(state.respondent).toBe(second)
     expect(state.bezzerQueue).toEqual([])
     state = answerCurrent(state, true, zero).state
-    expect(getTeam(state, second!).position).toBe(1)
-    expect(getTeam(state, asked.color).tiles[asked.tileIndex]?.used).toBe(true)
-    expect(state.respondent).toBeNull()
-    expect(state.turn).toBe(turn + 1)
+    expect(state.pendingPoints).toBe(second)
+    expect(getTeam(state, second!).position).toBe(0)
+    expect(getTeam(state, asked.color).tiles[asked.tileIndex]?.used).toBe(false)
+    expect(state.bezzerQueue).toEqual([])
+    expect(state.turn).toBe(turn)
+    const scored = awardBezzerPoints(state, 1, zero).state
+    expect(getTeam(scored, second!).position).toBe(1)
+    expect(getTeam(scored, asked.color).tiles[asked.tileIndex]?.used).toBe(true)
+    expect(scored.pendingPoints).toBeNull()
+    expect(scored.respondent).toBeNull()
+    expect(scored.turn).toBe(turn + 1)
+  })
+
+  it("lets a correct besserwisser choose 1 or 3 points after the answer", () => {
+    let state = startRound(fresh(), zero).state
+    const asked = currentQuestion(state)!
+    const thief = state.order.find((color) => color !== asked.color)!
+    state = playBezzer(state, thief).state
+    state = answerCurrent(state, false, zero).state
+    state = answerCurrent(state, true, zero).state
+    expect(state.pendingPoints).toBe(thief)
+    const low = awardBezzerPoints(state, 1, zero)
+    expect(getTeam(low.state, thief).position).toBe(1)
+    const high = awardBezzerPoints(state, 3, zero)
+    expect(getTeam(high.state, thief).position).toBe(3)
+    expect(high.state.doubleNext).toBeNull()
+  })
+
+  it("doubles a chosen besserwisser score and still moves one square on the dots", () => {
+    let state = startRound(fresh(), zero).state
+    const asked = currentQuestion(state)!
+    const thief = state.order.find((color) => color !== asked.color)!
+    for (let step = 0; step < 16; step += 1) state = nudge(state, thief, "forward", zero).state
+    expect(onHomeStretch(getTeam(state, thief))).toBe(true)
+    state = playBezzer(state, thief).state
+    state = answerCurrent(state, false, zero).state
+    state = answerCurrent(state, true, zero).state
+    const dotted = awardBezzerPoints({ ...state, doubleNext: thief }, 3, zero)
+    expect(getTeam(dotted.state, thief).position).toBe(17)
+    expect(dotted.state.doubleNext).toBe(thief)
+
+    let open = startRound(fresh(), zero).state
+    const askedOpen = currentQuestion(open)!
+    const openThief = open.order.find((color) => color !== askedOpen.color)!
+    open = playBezzer(open, openThief).state
+    open = answerCurrent(open, false, zero).state
+    open = answerCurrent(open, true, zero).state
+    const doubled = awardBezzerPoints({ ...open, doubleNext: openThief }, 3, zero)
+    expect(getTeam(doubled.state, openThief).position).toBe(6)
+    expect(doubled.state.doubleNext).toBeNull()
   })
 
   it("refills swap and besserwisser bricks on a new round", () => {
