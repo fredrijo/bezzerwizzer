@@ -3,6 +3,7 @@ import { MOODS, tableAudio, type MoodId } from "@/game/audio.ts"
 import { DECK_INFO } from "@/game/categories.ts"
 import {
   answerCurrent,
+  awardBezzerPoints,
   createGame,
   effectiveChance,
   newRound,
@@ -284,6 +285,7 @@ export default function App() {
                 commit(startRound(state))
               }}
               onAnswer={(correct) => commit(answerCurrent(state, correct))}
+              onPoints={(points) => commit(awardBezzerPoints(state, points))}
               onZwap={(source, target) => {
                 commit(swapTiles(state, source, target))
                 setSwapFrom(null)
@@ -345,7 +347,7 @@ export default function App() {
               onValueChange={(value) => patch(setStreakChance(state, value[0] ?? state.streakChance))}
             />
             <p className="mt-2 text-xs text-muted-foreground">
-              Streak {state.streak}. Kategori 1 til 4 går på omgang. På prikkfeltene gir riktig svar ett felt. Zwap på egen tur bytter to åpne brikker. Besserwisser stiller et lag i kø, og de svarer bare hvis det blir galt.
+              Streak {state.streak}. Kategori 1 til 4 går på omgang. På prikkfeltene gir riktig svar ett felt. Zwap merker to åpne brikker og ber om bekreftelse. Besserwisser stiller et lag i kø. Svarer de riktig, velger bordet 1 eller 3 poeng.
             </p>
           </div>
           <ol className="mt-4 space-y-1 text-sm text-muted-foreground">
