@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { categoryById } from "@/game/categories.ts"
-import { currentQuestion } from "@/game/logic.ts"
+import { currentQuestion, onHomeStretch } from "@/game/logic.ts"
 import { TEAM_STYLE, type GameState, type TeamColor, type TileRef } from "@/game/types.ts"
 import { CategoryMark } from "@/components/CategoryMark.tsx"
 import { Button } from "@/components/ui/button.tsx"
@@ -9,21 +9,28 @@ type TurnBoxProps = {
   state: GameState
   onStart: () => void
   onAnswer: (correct: boolean) => void
+  onPoints: (points: 1 | 3) => void
   onZwap: (source: TileRef, target: TileRef) => void
   onBezzer: (color: TeamColor) => void
   onNewRound: () => void
 }
 
-export function TurnBox({ state, onStart, onAnswer, onZwap, onBezzer, onNewRound }: TurnBoxProps) {
+function sameTile(left: TileRef | null, right: TileRef | null) {
+  return Boolean(left && right && left.color === right.color && left.index === right.index)
+}
+
+export function TurnBox({ state, onStart, onAnswer, onPoints, onZwap, onBezzer, onNewRound }: TurnBoxProps) {
   const question = currentQuestion(state)
-  const questionKey = `${state.turn}:${question?.color ?? ""}:${question?.tileIndex ?? ""}`
+  const questionKey = `${state.turn}:${question?.color ?? ""}:${question?.tileIndex ?? ""}:${state.pendingPoints ?? ""}`
   const [picking, setPicking] = useState(false)
   const [zwapFrom, setZwapFrom] = useState<TileRef | null>(null)
+  const [zwapTo, setZwapTo] = useState<TileRef | null>(null)
   const [pickingKey, setPickingKey] = useState(questionKey)
   if (pickingKey !== questionKey) {
     setPickingKey(questionKey)
     setPicking(false)
     setZwapFrom(null)
+    setZwapTo(null)
   }
   const asked = question ? state.teams.find((team) => team.color === question.color) : null
   const respondent = state.respondent ? state.teams.find((team) => team.color === state.respondent) : null
@@ -96,7 +103,11 @@ export function TurnBox({ state, onStart, onAnswer, onZwap, onBezzer, onNewRound
           </p>
           <h2 className="wordmark text-3xl leading-none">{category.name}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {respondent ? `${asked.name} svarte galt. ${answering.name} får sjansen.` : category.blurb}
+            {state.pendingPoints
+              ? `${answering.name} svarte riktig.`
+              : respondent
+                ? `${asked.name} svarte galt. ${answering.name} får sjansen.`
+                : category.blurb}
           </p>
         </div>
       </div>
@@ -105,6 +116,24 @@ export function TurnBox({ state, onStart, onAnswer, onZwap, onBezzer, onNewRound
           I kø: {queued.map((team) => team.name).join(", ")}
         </p>
       )}
+      {state.pendingPoints ? (
+        <div className="mt-4 grid gap-2">
+          <p className="text-sm font-semibold">Riktig. Velg poeng til {answering.name}.</p>
+          {onHomeStretch(answering) ? (
+            <p className="text-xs text-muted-foreground">Prikkfeltet gir ett felt, enten dere velger 1 eller 3.</p>
+          ) : state.doubleNext === answering.color ? (
+            <p className="text-xs text-muted-foreground">Dobbelt: 1 poeng gir 2 felt, 3 poeng gir 6 felt.</p>
+          ) : null}
+          <div className="grid grid-cols-2 gap-2">
+            <Button type="button" className="h-12 text-base" onClick={() => onPoints(1)}>
+              1 poeng
+            </Button>
+            <Button type="button" className="h-12 text-base" onClick={() => onPoints(3)}>
+              3 poeng
+            </Button>
+          </div>
+        </div>
+      ) : (
       <div className="mt-4 grid grid-cols-2 gap-2">
         <Button type="button" className="h-12 text-base" onClick={() => onAnswer(true)}>
           Riktig
@@ -119,6 +148,7 @@ export function TurnBox({ state, onStart, onAnswer, onZwap, onBezzer, onNewRound
             className="col-span-2 h-12 text-base"
             onClick={() => {
               setZwapFrom(null)
+              setZwapTo(null)
               setPicking((open) => !open)
             }}
           >
@@ -126,7 +156,8 @@ export function TurnBox({ state, onStart, onAnswer, onZwap, onBezzer, onNewRound
           </Button>
         )}
       </div>
-      {challengers.length > 0 && (
+      )}
+      {!state.pendingPoints && challengers.length > 0 && (
         <div className="mt-3 grid gap-1.5">
           <p className="text-[11px] tracking-[0.18em] text-muted-foreground uppercase">Besserwisser</p>
           {challengers.map((team) => {
@@ -148,12 +179,51 @@ export function TurnBox({ state, onStart, onAnswer, onZwap, onBezzer, onNewRound
           })}
         </div>
       )}
-      {picking && asked.swapsLeft > 0 && !respondent && (
+      {picking && asked.swapsLeft > 0 && !respondent && !state.pendingPoints && (
         <div className="mt-3 grid gap-2">
+          {zwapFrom && zwapTo && (
+            <div className="rounded-2xl border-2 border-[#d21f3c] bg-[#fff6df] p-3 text-[#1c2416]">
+              <p className="text-[11px] font-bold tracking-[0.18em] text-[#d21f3c] uppercase">Bekreft zwap</p>
+              <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                <ZwapChip state={state} tile={zwapFrom} mark="A" />
+                <span className="text-lg font-bold" aria-hidden>
+                  ↔
+                </span>
+                <ZwapChip state={state} tile={zwapTo} mark="B" />
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  className="h-11"
+                  onClick={() => {
+                    onZwap(zwapFrom, zwapTo)
+                    setPicking(false)
+                    setZwapFrom(null)
+                    setZwapTo(null)
+                  }}
+                >
+                  Bekreft
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 border-[#1c2416]/30 bg-transparent text-[#1c2416]"
+                  onClick={() => {
+                    setZwapFrom(null)
+                    setZwapTo(null)
+                  }}
+                >
+                  Velg på nytt
+                </Button>
+              </div>
+            </div>
+          )}
           <p className="text-xs text-muted-foreground">
-            {zwapFrom
-              ? "Velg den andre ubrukte brikken. Egne, en motstanders, eller to andres."
-              : "Velg først en ubrukt brikke. Alle åpne brikker på bordet kan zwappes, ikke bare den som er oppe nå."}
+            {zwapFrom && zwapTo
+              ? "Begge brikkene er merket. Bekreft byttet, eller trykk en merket brikke for å slippe den."
+              : zwapFrom
+                ? "Første brikke er merket Zwappes. Velg den andre."
+                : "Velg to ubrukte brikker. Alle åpne brikker kan zwappes, ikke bare den som er oppe nå."}
           </p>
           {state.teams.map((team) => {
             const openTiles = team.tiles
@@ -169,30 +239,41 @@ export function TurnBox({ state, onStart, onAnswer, onZwap, onBezzer, onNewRound
                 <div className="grid grid-cols-2 gap-1">
                   {openTiles.map(({ tile, index }) => {
                     const option = categoryById(tile.categoryId)
-                    const selected = zwapFrom?.color === team.color && zwapFrom.index === index
+                    const ref = { color: team.color, index }
+                    const mark = sameTile(zwapFrom, ref) ? "A" : sameTile(zwapTo, ref) ? "B" : null
                     const current = team.color === question.color && index === question.tileIndex
                     return (
                       <button
                         key={`${team.color}-${index}`}
                         type="button"
-                        className={`flex items-center gap-1.5 rounded-lg border bg-[#f6f1e4] px-1.5 py-1 text-left text-[11px] font-semibold text-[#1c2416] ${
-                          selected ? "ring-2 ring-primary" : ""
+                        aria-pressed={mark != null}
+                        className={`relative flex items-center gap-1.5 rounded-lg border px-1.5 py-1 text-left text-[11px] font-semibold text-[#1c2416] ${
+                          mark
+                            ? "border-[#d21f3c] bg-[#ffe08a] shadow-[0_0_0_3px_rgba(210,31,60,0.45)]"
+                            : "border-transparent bg-[#f6f1e4]"
                         }`}
                         onClick={() => {
-                          const ref = { color: team.color, index }
+                          if (sameTile(zwapFrom, ref)) {
+                            setZwapFrom(zwapTo)
+                            setZwapTo(null)
+                            return
+                          }
+                          if (sameTile(zwapTo, ref)) {
+                            setZwapTo(null)
+                            return
+                          }
                           if (!zwapFrom) {
                             setZwapFrom(ref)
                             return
                           }
-                          if (zwapFrom.color === ref.color && zwapFrom.index === ref.index) {
-                            setZwapFrom(null)
-                            return
-                          }
-                          setPicking(false)
-                          setZwapFrom(null)
-                          onZwap(zwapFrom, ref)
+                          setZwapTo(ref)
                         }}
                       >
+                        {mark && (
+                          <span className="absolute -top-2 right-1 rounded-full bg-[#d21f3c] px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase">
+                            Zwappes {mark}
+                          </span>
+                        )}
                         <CategoryMark category={option} size="sm" />
                         <span className="min-w-0 leading-tight">
                           {option.name}
@@ -210,8 +291,34 @@ export function TurnBox({ state, onStart, onAnswer, onZwap, onBezzer, onNewRound
         </div>
       )}
       <p className="mt-2 text-xs text-muted-foreground">
-        Riktig gir poengene til {answering.name}. Galt sender spørsmålet videre i køen.
+        {state.pendingPoints
+          ? `${answering.name} svarte riktig og venter på 1 eller 3 poeng.`
+          : respondent
+            ? `Riktig lar ${answering.name} velge 1 eller 3 poeng. Galt sender spørsmålet videre i køen.`
+            : `Riktig gir kategoriens poeng til ${answering.name}. Galt sender spørsmålet videre i køen.`}
       </p>
     </section>
+  )
+}
+
+function ZwapChip({ state, tile, mark }: { state: GameState; tile: TileRef; mark: "A" | "B" }) {
+  const team = state.teams.find((item) => item.color === tile.color)
+  const category = team ? categoryById(team.tiles[tile.index]!.categoryId) : null
+  const style = TEAM_STYLE[tile.color]
+  if (!team || !category) return null
+  return (
+    <div className="rounded-xl border-2 border-[#d21f3c] bg-[#ffe08a] p-2">
+      <p className="text-[10px] font-bold tracking-wide text-[#d21f3c] uppercase">Zwappes {mark}</p>
+      <p className="truncate text-[11px] font-semibold" style={{ color: style.base }}>
+        {team.name}
+      </p>
+      <div className="mt-1 flex items-center gap-1.5">
+        <CategoryMark category={category} size="sm" />
+        <span className="min-w-0 text-xs leading-tight font-semibold">
+          {category.name}
+          <span className="block font-normal opacity-70">{tile.index + 1} poeng</span>
+        </span>
+      </div>
+    </div>
   )
 }
