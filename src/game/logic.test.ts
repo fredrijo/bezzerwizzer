@@ -126,6 +126,19 @@ describe("scoring", () => {
     expect(next.effect.banner).toContain("Prikkfelt")
   })
 
+  it("stops on the first dotted square when entering the home stretch", () => {
+    let state = fresh()
+    for (let step = 0; step < 12; step += 1) state = nudge(state, "red", "forward", zero).state
+    expect(onHomeStretch(getTeam(state, "red"))).toBe(false)
+    const next = awardCorrect({ ...state, doubleNext: "red" }, "red", 3, zero)
+    expect(getTeam(next.state, "red").position).toBe(15)
+    expect(squareFor(getTeam(next.state, "red"))).toEqual({ x: 5, y: 5 })
+    expect(onHomeStretch(getTeam(next.state, "red"))).toBe(true)
+    expect(next.effect.banner).toContain("Første prikkfelt")
+    const again = awardCorrect(next.state, "red", 2, zero)
+    expect(getTeam(again.state, "red").position).toBe(16)
+  })
+
   it("doubles the next correct answer once", () => {
     const state = { ...fresh(), doubleNext: "red" as TeamColor }
     const next = awardCorrect(state, "red", 3, zero)
@@ -291,6 +304,19 @@ describe("scoring", () => {
     const high = awardBezzerPoints(state, 3, zero)
     expect(getTeam(high.state, thief).position).toBe(3)
     expect(high.state.doubleNext).toBeNull()
+  })
+
+  it("stops a besserwisser on the first dotted square when the points would pass it", () => {
+    let state = startRound(fresh(), zero).state
+    const asked = currentQuestion(state)!
+    const thief = state.order.find((color) => color !== asked.color)!
+    for (let step = 0; step < 13; step += 1) state = nudge(state, thief, "forward", zero).state
+    state = playBezzer(state, thief).state
+    state = answerCurrent(state, false, zero).state
+    state = answerCurrent(state, true, zero).state
+    const scored = awardBezzerPoints(state, 3, zero)
+    expect(getTeam(scored.state, thief).position).toBe(15)
+    expect(scored.effect.banner).toContain("første prikkfelt")
   })
 
   it("doubles a chosen besserwisser score and still moves one square on the dots", () => {
